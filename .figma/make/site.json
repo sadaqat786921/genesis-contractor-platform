@@ -1,0 +1,11 @@
+{
+  "title": "Genesis · Contractor",
+  "description": "Landlord Service Plans — Genesis Contractor portal: jobs from LSP, visits to confirm, photo proof, gas safety certificates, your invoices and payments, insurance and certificates, calendar and time off, documents, messages and account.",
+  "language": "en-GB",
+  "robots": {
+    "index": false
+  },
+  "icons": {
+    "icon": "favicon.svg"
+  }
+}
