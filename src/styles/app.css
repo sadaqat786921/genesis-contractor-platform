@@ -1002,3 +1002,9 @@ tr.static { cursor: default; } tr.static:hover td { background: none; }
 .covsplit > div.ok { background: var(--ok-bg); } .covsplit > div.ok b { color: var(--ok); }
 .covsplit > div.you { background: var(--bg-brand-subtle); } .covsplit > div.you b { color: var(--text-brand); }
 .covsplit .caption { display: inline-flex; gap: 4px; align-items: center; }
+
+/* ---------- contractor onboarding (Join) ---------- */
+.join { min-height: 100vh; background: var(--bg-page); }
+.join-top { display: flex; align-items: center; gap: 12px; padding: 16px 24px; background: var(--bg-surface); border-bottom: 1px solid var(--border-default); position: sticky; top: 0; z-index: 20; }
+.join-body { max-width: 1180px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+.joincta { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--border-default); border-radius: var(--r-xl); background: var(--bg-brand-subtle); }

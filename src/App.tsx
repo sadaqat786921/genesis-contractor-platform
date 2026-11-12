@@ -12,6 +12,8 @@ import { Compliance } from './pages/Compliance';
 import { Documents } from './pages/Documents';
 import { Activity } from './pages/Activity';
 import { Account } from './pages/Account';
+import { Join } from './pages/Join';
+import { useLocation } from 'react-router-dom';
 
 const PAGES = { home: HomePage, messages: Messages, jobs: Jobs, calendar: Calendar, payments: Payments, compliance: Compliance, documents: Documents, activity: Activity, account: Account };
 
@@ -30,13 +32,16 @@ function Platform({ onLogout }: { onLogout: () => void }) {
 
 export default function App() {
   const [auth, setAuth] = useState(read);
-  const nav = useNavigate();
+  const nav = useNavigate(); const loc = useLocation();
+  const [first, setFirst] = useState<{ email: string } | null>(null);
   const signIn = () => { write(true); setAuth(true); const h = location.hash.replace('#', ''); if (!h || h === '/' || h === '/login') nav('/home', { replace: true }); };
-  if (!auth) return <><Login onDone={signIn} /><Toasts /></>;
+  if (!auth && loc.pathname.startsWith('/join')) return <><Join onSignIn={() => nav('/login')} onSetPassword={email => { setFirst({ email }); nav('/login'); }} /><Toasts /></>;
+  if (!auth) return <><Login key={first?.email ?? 'in'} onDone={signIn} onJoin={() => { window.scrollTo({ top: 0 }); nav('/join'); }} start={first ? 'welcome' : 'in'} startEmail={first?.email} /><Toasts /></>;
   return <>
     <Routes>
       <Route path="/" element={<Navigate to="/home" replace />} />
       <Route path="/login" element={<Navigate to="/home" replace />} />
+      <Route path="/join" element={<Navigate to="/home" replace />} />
       <Route path="/*" element={<Platform onLogout={() => { write(false); setAuth(false); nav('/login', { replace: true }); }} />} />
     </Routes>
     <Toasts />

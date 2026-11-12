@@ -35,6 +35,14 @@ The client has approved this design. When editing:
 - Things only LSP does show a dashed "Prototype: LSP's answer" box (`DemoAnswer` in `lib.tsx`) so every step can be clicked through without the staff portals.
 - Web only, desktop first (same layout as the staff portals).
 
+## Joining LSP (onboarding and KYC)
+- `src/pages/Join.tsx`, route `#/join`, opened from **"Join as a contractor"** on the login page (before sign-in). Steps (`HSteps`): Your business → Your work → Your documents → Agree and send → LSP checks.
+- **Your business:** type (limited company / sole trader / partnership), name, company number (8 digits for a limited company), contact, mobile, email (their login), address, postcode, VAT. "Fill with example" fills Northside Plumbing & Heating Ltd.
+- **Your work:** trade work or site inspections, trades, areas covered (North London), hourly rate, emergency call-outs, team size, years trading.
+- **Your documents (KYC):** photo ID, right to work (optional share code), public liability insurance (policy number, end date, cover at least £2 million), the trade registration for each trade (Gas Safe, NICEIC/NAPIT, WaterSafe/CIPHE, CompetentRoofer, MLA, AIIC/ABBE), bank details (letter plus account name, sort code, account number). Ended documents can't be uploaded; ones ending within 60 days are flagged.
+- **Agree and send:** summary with Change links, the contractor agreement and the health, safety and conduct rules (summary pop-ups), consent to checks, "everything is true".
+- **LSP checks:** application status page (Checking / More info asked / Approved / Not approved) with each document's status and the history. Prototype answers: LSP approves (login email; "Set your password" opens the login's set-password step with their email), asks for more (insurance sent back; re-upload and "Send back to LSP"), or rejects (reason). In the live product the Supervisor answers on the **Sign-Ups** page of the Supervisor portal.
+
 ## The job flow (same as the staff job flows, seen from the contractor's side)
 Contractor steps (`STEPS` in `lib.tsx`): Job given to you → Visit confirmed → Work started → Photos and invoice sent → Checked by LSP → Paid. Statuses: `Assigned` (with `visitOk` once confirmed) → `In progress` → `Proof uploaded` (or `Sent back`) → `Approved` (their invoice becomes a `Bill`, paid on the next Friday); `Cancelled` when they hand a job back.
 - **Assigned:** Confirm the visit; Ask for another time (LSP rebooks, they confirm again); I can't do this job (reason, handed back, nothing paid). On the visit day: Start work, I couldn't get in (reason, optional photo; LSP rebooks), I'm running late.
@@ -51,6 +59,7 @@ Contractor steps (`STEPS` in `lib.tsx`): Job given to you → Visit confirmed �
 - LSP holds Photo ID, right to work, public liability insurance, Gas Safe registration and bank details (`docs`). Insurance and the trade registration must stay in date (reminders 60 and 30 days before). If one runs out the contractor is **Paused**: no new jobs and they can't confirm or start booked ones. Uploading a new one goes to "LSP checking"; when LSP checks it they are active again. Earlier versions are kept.
 
 ## Screens (`src/pages/`)
+- `Join.tsx`: contractor onboarding and KYC (see above).
 - `Home.tsx` (**My Day**): to-be-paid hero (pay day, jobs done ring), Today's visits, KPIs, Needs you, Coming up, Waiting for LSP, insurance status, homes you're visiting, LSP contacts.
 - `Jobs.tsx` (**My Jobs**): list (to do, booked, LSP checking, done, all; search, type, year) and the job page with every step, the finish form and the prototype answers.
 - `Calendar.tsx`: 14 days of visits, pay days and time off (earlier / later); **Add time off** (warns about booked visits and asks LSP to move them), remove time off.

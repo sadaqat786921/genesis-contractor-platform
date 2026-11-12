@@ -109,9 +109,9 @@ export const crumbsFor = (r: Route, go: (r: Route) => void, extra?: string) => {
 };
 
 /** Sign in (email, password, then a 6-digit code). First time: set a password from the welcome email LSP sent from Outlook. */
-export function Login({ onDone }: { onDone: () => void }) {
-  const [step, setStep] = useState<'in' | 'welcome' | 'code' | 'locked' | 'forgot'>('in');
-  const [email, setEmail] = useState('gary@heatright.co.uk');
+export function Login({ onDone, onJoin, start = 'in', startEmail }: { onDone: () => void; onJoin?: () => void; start?: 'in' | 'welcome'; startEmail?: string }) {
+  const [step, setStep] = useState<'in' | 'welcome' | 'code' | 'locked' | 'forgot'>(start);
+  const [email, setEmail] = useState(startEmail ?? 'gary@heatright.co.uk');
   const [pw, setPw] = useState('••••••••••');
   const [np, setNp] = useState(''); const [np2, setNp2] = useState(''); const [agree, setAgree] = useState(false);
   const [show, setShow] = useState(false);
@@ -142,6 +142,7 @@ export function Login({ onDone }: { onDone: () => void }) {
           <Btn type="submit">Sign in <ArrowRight size={18} /></Btn>
           <div className="flex between"><button type="button" className="link small" onClick={() => setStep('welcome')}>First time? Set your password</button><button type="button" className="link small" onClick={() => setStep('forgot')}>Forgot password?</button></div>
           <Note>LSP sets up your account once your ID, insurance and trade certificates are checked, and sends the login email from Outlook. You only see the jobs LSP gives you.</Note>
+          {onJoin && <div className="joincta"><div className="stack grow"><b>New to LSP?</b><span className="caption">Apply to get repair and safety work in North London.</span></div><button type="button" className="btn line sm" onClick={onJoin}>Join as a contractor <ArrowRight size={14} /></button></div>}
         </form>}
         {step === 'welcome' && <form onSubmit={e => { e.preventDefault(); setStep('code'); }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <span className="tile lg t-brand"><KeyRound size={22} /></span>
