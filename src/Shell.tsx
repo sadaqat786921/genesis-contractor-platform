@@ -6,7 +6,7 @@ import {
 import { useStore, useLookups, money, type Route } from './store';
 import { daysFrom, LSP_PHONE } from './data';
 import { Btn, IBtn, Note, Avatar } from './ui';
-import { needsMe, todo, docsDue, docView, unreadOf, moneyOf, whenLabel, timeOf, dayOf } from './pages/lib';
+import { needsMe, todo, docsDue, docView, unreadOf, moneyOf, whenLabel, timeOf, dayOf, termsDue } from './pages/lib';
 
 export const NAV: { group: string; items: { id: Route; label: string; icon: typeof Home }[] }[] = [
   { group: 'Overview', items: [{ id: 'home', label: 'My Day', icon: LayoutDashboard }, { id: 'messages', label: 'Messages', icon: MessageSquare }] },
@@ -26,6 +26,7 @@ export function useCounts() {
     calendar: s.jobs.filter(j => ['Assigned', 'In progress'].includes(j.status) && daysFrom(j.visit) === 0).length,
     payments: moneyOf(s).checking.length,
     compliance: docsDue(s).length,
+    account: (s.me.bank ? 0 : 1) + termsDue(s).length,
   } as Partial<Record<Route, number>>;
 }
 
@@ -66,6 +67,8 @@ export function PageHeader({ title, action, crumbs, back }: { title: ReactNode; 
     ...s.jobs.filter(j => j.followReq?.status === 'Asked').map(j => ({ t: `Follow-up work waiting for LSP`, d: `${j.followReq!.title} · ${money(j.followReq!.amount)}`, r: 'jobs' as Route, id: j.id as string | null, tone: 'info' })),
     ...s.bills.filter(b => !b.paid).map(b => ({ t: `Invoice ${b.no} approved`, d: `${money(b.amount)} paid on ${b.payRun}`, r: 'payments' as Route, id: b.job as string | null, tone: 'ok' })),
     ...docsDue(s).map(d => ({ t: `${d.name}: ${docView(d).label}`, d: 'Upload the new one to keep getting work', r: 'compliance' as Route, id: null as string | null, tone: docView(d).tone })),
+    ...(!s.me.bank ? [{ t: s.me.bankPending ? 'LSP is checking your bank details' : 'Add your bank details', d: 'So LSP can pay you', r: 'account' as Route, id: null as string | null, tone: 'warn' }] : []),
+    ...termsDue(s).map(id => ({ t: `New ${s.terms[id].title.toLowerCase()}`, d: `Version ${s.terms[id].version} to read and accept`, r: 'account' as Route, id: null as string | null, tone: 'info' })),
     ...unreadOf(s).map(c => ({ t: 'New message from LSP', d: c.subject ?? c.text.slice(0, 60), r: 'messages' as Route, id: null as string | null, tone: 'info' })),
   ];
   const cal = [

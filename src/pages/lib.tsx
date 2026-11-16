@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react';
-import { Download, Send, Eye, FileText, Image as ImageIcon, Wrench, FlaskConical, Flame, Siren } from 'lucide-react';
+import { Download, Send, Eye, FileText, Image as ImageIcon, Wrench, FlaskConical, Flame, Siren, Check } from 'lucide-react';
 import { useStore, useLookups, money } from '../store';
-import { ME_NAME, TODAY, DAYS, MONTHS, nowStamp, parseDate, daysFrom, fmtDate, type Job, type Property, type Tone, type Comm, type Bill, type CDoc } from '../data';
-import { Btn, Chip, Modal, KV, Card, Empty, Field, Area } from '../ui';
+import { ME_NAME, TODAY, DAYS, MONTHS, nowStamp, parseDate, daysFrom, fmtDate, type Job, type Property, type Tone, type Comm, type Bill, type CDoc, type TermsDoc, type TermsId } from '../data';
+import { Btn, Chip, Modal, KV, Card, Empty, Field, Area, Note } from '../ui';
 
 /* Shared pieces for the contractor portal: what each job status means to the contractor, money, and the LSP paper.
    The contractor only sees what LSP pays them. Never LSP's price to the landlord or agent, budgets, plans or who owns the home. */
@@ -136,9 +136,9 @@ export function DocSheet({ kind, to, meta, site, rows, foot, stamp, children }: 
 /** Remittance: what LSP paid on one pay day, on LSP paper. */
 export function RemittanceModal({ id, onClose }: { id: string; onClose: () => void }) {
   const s = useStore(); const L = useLookups(); const r = remittances(s).find(x => x.id === id)!;
-  return <Modal wide title={`Remittance ${r.id}`} sub={`Paid ${r.date} to ${s.me.bank.name}, account ending ${s.me.bank.last4}.`} onClose={onClose}
+  return <Modal wide title={`Remittance ${r.id}`} sub={`Paid ${r.date} to the account ending ${last4(s)}.`} onClose={onClose}
     footer={<><Btn kind="outline" onClick={onClose}>Close</Btn><Btn icon={<Download size={16} />} onClick={() => { s.log(`Downloaded remittance ${r.id}`, 'Payments'); downloadPdf(s, `Remittance ${r.id}`); }}>Download PDF</Btn></>}>
-    <DocSheet kind="REMITTANCE ADVICE" stamp={{ text: 'PAID', tone: 'ok' }} to={{ label: 'Paid to', rows: [s.me.name, s.me.address, `Sort code ${s.me.bank.sort} · account ···· ${s.me.bank.last4}`] }}
+    <DocSheet kind="REMITTANCE ADVICE" stamp={{ text: 'PAID', tone: 'ok' }} to={{ label: 'Paid to', rows: [s.me.name, s.me.address, `Account ···· ${last4(s)}`] }}
       meta={[['Remittance', r.id], ['Paid on', ddmm(r.date)], ['Paid by', 'Bank transfer'], ['Invoices', String(r.bills.length)]]}
       rows={r.bills.map(b => { const j = s.jobs.find(x => x.id === b.job); return { a: b.no, b: `${j?.title ?? b.job} · ${L.prop(j?.property)?.address ?? ''}`, c: dayOf(b.approved), amt: b.amount }; })}
       foot={[['Total paid', '£' + num(r.total)]]}>
@@ -190,10 +190,25 @@ export function MiniJobList({ jobs, empty = 'No jobs.' }: { jobs: Job[]; empty?:
 export function ViewBtn({ onClick, label = 'View' }: { onClick: () => void; label?: string }) { return <Btn sm kind="ghost" icon={<Eye size={14} />} onClick={onClick}>{label}</Btn>; }
 export function DocIcon({ tone = 'brand' }: { tone?: string }) { return <span className={`tile t-${tone}`} style={{ width: 32, height: 32 }}><FileText size={15} /></span>; }
 export function SectionNote({ children }: { children: ReactNode }) { return <Card className="flat"><span className="small">{children}</span></Card>; }
-export const bankLine = (s: S) => `${s.me.bank.name} · ${s.me.bank.sort} · ···· ${s.me.bank.last4}`;
+export const bankLine = (s: S) => s.me.bank ? `${s.me.bank.name} · ${s.me.bank.sort} · ···· ${s.me.bank.last4}` : 'Not added yet';
+export const last4 = (s: S) => s.me.bank?.last4 ?? '····';
 export function InvoiceSummary({ j }: { j: Job }) {
   const s = useStore(); const v = invView(s, j); const b = billOf(s, j);
   if (!j.cInvoice) return null;
   return <KV rows={[['Invoice number', j.cInvoice.no], ['Amount', money(j.cInvoice.amount)], ['Sent', j.cInvoice.at], ['File', j.cInvoice.file], ['Status', <Chip key="c" tone={v.tone}>{v.label}</Chip>], ...(b ? [['LSP reference', b.id] as [string, ReactNode]] : []), ...(b?.remit ? [['Remittance', b.remit] as [string, ReactNode]] : [])]} />;
 }
 export { daysFrom };
+
+/* ---------------- LSP's contractor agreement and rules ---------------- */
+/** Documents LSP published a newer version of, that this contractor hasn't accepted yet. */
+export const termsDue = (s: S) => (['agreement', 'rules'] as TermsId[]).filter(id => (s.me.accepted[id]?.version ?? 0) < s.terms[id].version);
+/** Read LSP's current agreement or rules. With onAccept, the contractor ticks and accepts this version. */
+export function TermsModal({ doc, onClose, onAccept }: { doc: TermsDoc; onClose: () => void; onAccept?: () => void }) {
+  const [tick, setTick] = useState(false);
+  return <Modal wide title={doc.title} sub={`Version ${doc.version} · updated ${dayOf(doc.published)} by LSP`} onClose={onClose}
+    footer={onAccept ? <><Btn kind="outline" onClick={onClose}>Not now</Btn><Btn icon={<Check size={16} />} disabled={!tick} onClick={onAccept}>Accept version {doc.version}</Btn></> : <Btn onClick={onClose}>Close</Btn>}>
+    {doc.version > 1 && <Note>What changed: {doc.change}</Note>}
+    <div className="terms">{doc.sections.map((x, i) => <div key={x.h} className="terms-i"><span className="terms-n">{i + 1}</span><div className="stack"><b>{x.h}</b><span>{x.t}</span></div></div>)}</div>
+    {onAccept && <label className="check" style={{ cursor: 'pointer' }}><input type="checkbox" checked={tick} onChange={e => setTick(e.target.checked)} /> I have read and accept version {doc.version}</label>}
+  </Modal>;
+}

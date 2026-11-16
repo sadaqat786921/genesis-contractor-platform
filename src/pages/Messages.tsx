@@ -7,7 +7,7 @@ import { PageHeader, crumbsFor } from '../Shell';
 import { DemoAnswer, lspSays } from './lib';
 
 const TOPICS = ['General', 'A job', 'A visit time', 'An invoice or payment', 'Insurance or certificates', 'My account'];
-const KINDS: ReqKind[] = ['Hourly rate', 'Areas I cover', 'Bank details', 'Email or phone', 'Pause my account', 'Stop working with LSP', 'Other'];
+const KINDS: ReqKind[] = ['Hourly rate', 'Areas I cover', 'Email or phone', 'Pause my account', 'Stop working with LSP', 'Other'];
 
 export function Messages() {
   const s = useStore(); const admin = s.staff.find(x => x.id === 'et');
@@ -26,7 +26,7 @@ export function Messages() {
     <PageHeader crumbs={crumbsFor('messages', s.go)} title="Messages" action={<Btn kind="outline" icon={<Plus size={18} />} onClick={() => setAsk(true)}>New request</Btn>} />
     <PageTabs value={tab} onChange={setTab} items={[{ id: 'messages', label: 'Messages with LSP', count: all.length }, { id: 'requests', label: 'Requests', count: s.requests.length }]} />
     {tab === 'messages' && <div className="dgrid">
-      <Card title="Conversation" sub="Emails, calls and portal messages between you and LSP, newest first. Every message keeps its date and time.">
+      <Card title="Conversation">
         {all.length ? <div className="divlist">{all.map(c => { const me = mine(c.by); const isNew = unread.includes(c.id); return <div key={c.id} className="item" style={{ alignItems: 'flex-start' }}>
           {me ? <Avatar name={c.by} photo="images/av2.jpg" /> : <Avatar name={c.by} photo={s.staff.find(x => x.name === c.by)?.photo} />}
           <div className="stack grow" style={{ gap: 4 }}>
@@ -38,7 +38,7 @@ export function Messages() {
         </div>; })}</div> : <Empty icon={<MessageSquare size={22} />}>No messages yet.</Empty>}
       </Card>
       <div className="col">
-        <Card title="Send a message" sub="Goes to LSP's office team. For a job, it's quicker to message from the job page so it goes to the person who gave it to you.">
+        <Card title="Send a message" sub="For a job, message from the job page instead.">
           <Field label="About"><Select value={topic} onChange={setTopic} options={TOPICS.map(t => ({ value: t, label: t }))} /></Field>
           <Field label="Message"><Area value={text} onChange={setText} placeholder="Type your message" /></Field>
           <Btn icon={<Send size={16} />} disabled={!text.trim()} onClick={send}>Send</Btn>
@@ -48,7 +48,7 @@ export function Messages() {
       </div>
     </div>}
     {tab === 'requests' && <div className="dgrid">
-      <Card title="Requests" sub="Changes you asked LSP to make to your account. Every answer keeps its date and time." action={<Btn sm icon={<Plus size={14} />} onClick={() => setAsk(true)}>New request</Btn>}>
+      <Card title="Requests" action={<Btn sm icon={<Plus size={14} />} onClick={() => setAsk(true)}>New request</Btn>}>
         {s.requests.length ? <div className="divlist">{[...s.requests].sort((a, b) => parseDate(b.at).getTime() - parseDate(a.at).getTime()).map(q => <div key={q.id} className="item" style={{ alignItems: 'flex-start' }}>
           <span className={`tile ${q.status === 'Done' ? 't-ok' : q.status === 'Declined' ? 't-neutral' : 't-info'}`} style={{ width: 32, height: 32 }}>{q.status === 'Sent' ? <Clock size={15} /> : q.status === 'Done' ? <CheckCircle2 size={15} /> : <Inbox size={15} />}</span>
           <div className="stack grow" style={{ gap: 4 }}><b>{q.title}</b><span className="caption">{q.kind} · sent {q.at}</span><span className="small">{q.about}</span>{q.reply && <span className="small" style={{ color: 'var(--text-primary)' }}>LSP: {q.reply} <span className="caption">({q.answered})</span></span>}</div>
@@ -56,7 +56,7 @@ export function Messages() {
         </div>)}</div> : <Empty icon={<Inbox size={22} />}>No requests yet.</Empty>}
       </Card>
       <div className="col">
-        <Card title="What you can ask"><span className="small" style={{ lineHeight: 1.6 }}>Change your hourly rate, the areas you cover, your bank details, email or phone, pause your account for a while, or stop working with LSP. LSP checks bank detail changes by phone first.</span></Card>
+        <Card title="What you can ask"><div className="flex wrap" style={{ gap: 6 }}>{KINDS.filter(k => k !== 'Other').map(k => <Chip key={k} tone="neutral" dot={false}>{k}</Chip>)}</div><span className="caption">Bank details are changed from Account.</span></Card>
         {waiting.length > 0 && <DemoAnswer note="In the live product the Supervisor or Office Admin answers from the staff portal.">{waiting.map(r => <Btn key={r.id} sm kind="outline" onClick={() => { const reply = r.kind === 'Hourly rate' ? 'Thanks. Rates are reviewed every January. We will look at it then.' : r.kind === 'Bank details' ? 'We called you on 07700 904001 to check it. Your new bank details are saved for the next pay day.' : 'Done. Thanks for letting us know.'; const st = r.kind === 'Hourly rate' ? 'Declined' as const : 'Done' as const; s.setRequests(rs => rs.map(x => x.id === r.id ? { ...x, status: st, reply, answered: nowStamp() } : x)); if (r.kind === 'Bank details') { const m = r.about.match(/sort code ([\d-]+) · account ending (\d{4})/); if (m) s.setMe(x => ({ ...x, bank: { ...x.bank, sort: m[1], last4: m[2] }, docs: x.docs.map(d => d.id === 'D5' ? { ...d, ref: `Barclays · ···· ${m[2]}` } : d) })); } lspSays(s, `Re: ${r.title}`, reply, 'Sarah Khan'); s.toast('LSP answered'); }}>LSP answers “{r.title}”</Btn>)}</DemoAnswer>}
       </div>
     </div>}

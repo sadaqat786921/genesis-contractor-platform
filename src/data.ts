@@ -49,12 +49,15 @@ export const STAFF: Staff[] = [
 
 /* ---------- the contractor ---------- */
 /** Documents LSP needs before it gives a contractor work. If insurance or the trade certificate runs out, the contractor is paused. */
-export interface CDoc { id: string; name: string; status: DocStatus; file: string; uploaded: string; expires?: string; ref?: string; note?: string; history: { file: string; uploaded: string; expires?: string }[]; needed: 'Always' | 'Keep in date' }
+export interface CDoc { id: string; name: string; status: DocStatus; file: string; uploaded: string; expires?: string; ref?: string; note?: string; history: { file: string; uploaded: string; expires?: string }[]; needed: 'Always' | 'Keep in date';
+  /** DBS check: a photo of each side, the date it was issued, and when LSP asks for a new one. */ files?: { front: string; back: string }; issued?: string; renewLabel?: string }
 export interface Contractor {
   id: string; name: string; trade: string; contact: string; email: string; phone: string; address: string; companyNo?: string; vatNo?: string;
   /** Areas the contractor covers. */ areas: string[]; joined: string; status: 'Active' | 'Paused'; pausedWhy?: string;
   /** Hourly rate LSP agreed when the contractor joined. LSP prices jobs with it. */ rate: number;
-  /** Where LSP pays them. Only the last 4 digits are shown. */ bank: { name: string; sort: string; last4: string };
+  /** Where LSP pays them. Only the last 4 digits are shown. Added in the portal after joining (not at onboarding). null = not added yet. */ bank: Bank | null;
+  /** New bank details waiting for LSP's phone check. */ bankPending?: Bank & { at: string };
+  /** The versions of LSP's contractor agreement and rules this contractor accepted. */ accepted: Record<TermsId, { version: number; at: string }>;
   docs: CDoc[]; comms: Comm[];
   notify: Record<'New job' | 'Visit changes' | 'Sent back' | 'Payments' | 'Expiry reminders', { email: boolean; sms: boolean }>;
 }
@@ -62,12 +65,13 @@ export const CONTRACTOR: Contractor = {
   id: 'C1', name: 'HeatRight Ltd', trade: 'Gas engineer', contact: 'Gary Holt', email: 'gary@heatright.co.uk', phone: '07700 904001', address: '6 Elland Road, London N11 2DL', companyNo: '12044817',
   areas: ['Islington', 'Highbury', 'Holloway', 'Camden', 'Tottenham', 'Crouch End'], joined: '4 Jan 2026', status: 'Active', rate: 60,
   bank: { name: 'HeatRight Ltd', sort: '20-41-06', last4: '4417' },
+  accepted: { agreement: { version: 3, at: '2 Sep 2026, 08:15' }, rules: { version: 2, at: '2 Sep 2026, 08:16' } },
   docs: [
     { id: 'D1', name: 'Photo ID', status: 'Verified', file: 'gary-holt-passport.pdf', uploaded: '4 Jan 2026, 10:12', needed: 'Always', history: [] },
     { id: 'D2', name: 'Right to work', status: 'Verified', file: 'right-to-work.pdf', uploaded: '4 Jan 2026, 10:14', needed: 'Always', history: [] },
     { id: 'D3', name: 'Public liability insurance', status: 'Verified', file: 'heatright-insurance-2026.pdf', uploaded: '28 Jan 2026, 09:30', expires: '1 Feb 2027', ref: 'Cover £2,000,000 · Policy PL-77102', needed: 'Keep in date', history: [{ file: 'heatright-insurance-2025.pdf', uploaded: '4 Jan 2026, 10:16', expires: '1 Feb 2026' }] },
     { id: 'D4', name: 'Gas Safe registration', status: 'Verified', file: 'gas-safe-card.pdf', uploaded: '4 Jan 2026, 10:18', expires: '12 Aug 2027', ref: 'Gas Safe No. 548221', needed: 'Keep in date', history: [] },
-    { id: 'D5', name: 'Bank details', status: 'Verified', file: 'bank-letter.pdf', uploaded: '4 Jan 2026, 10:20', ref: 'Barclays · ···· 4417', needed: 'Always', history: [] },
+    { id: 'D5', name: 'DBS check', status: 'Verified', file: 'dbs-gary-holt.jpg', uploaded: '4 Jan 2026, 10:20', ref: 'Basic DBS · certificate 001726554213', needed: 'Keep in date', issued: '12 Dec 2025', expires: '12 Dec 2028', renewLabel: 'New check by', files: { front: 'dbs-front.jpg', back: 'dbs-back.jpg' }, history: [] },
   ],
   notify: { 'New job': { email: true, sms: true }, 'Visit changes': { email: true, sms: true }, 'Sent back': { email: true, sms: true }, Payments: { email: true, sms: false }, 'Expiry reminders': { email: true, sms: false } },
   comms: [
@@ -78,6 +82,37 @@ export const CONTRACTOR: Contractor = {
     c('14 Oct 2026, 17:20', 'Emma Thompson', 'Email', 'Radiators at 12 Oak Street: the after photo does not show them working. Please add the photos so I can sign it off.', 'out', 'Sent back · 12 Oak Street'),
     c('15 Oct 2026, 08:20', 'Priya Shah', 'Call', 'Emergency at 3 Park Road: no heating for five tenants. Asked you to go at 12:00 today. Key safe code is in the job.', 'out', 'Emergency · 3 Park Road'),
   ],
+};
+
+export interface Bank { name: string; sort: string; last4: string }
+
+/* ---------- LSP's contractor agreement and rules ---------- */
+/** Written and published by LSP in the Supervisor portal (Settings › Contractor agreement and rules).
+    Contractors read the current version when they join, and accept each new version. */
+export type TermsId = 'agreement' | 'rules';
+export interface TermsDoc { id: TermsId; title: string; version: number; published: string; by: string; change: string; sections: { h: string; t: string }[]; history: { version: number; published: string; by: string; change: string }[] }
+export const TERMS: Record<TermsId, TermsDoc> = {
+  agreement: { id: 'agreement', title: 'Contractor agreement', version: 3, published: '1 Sep 2026, 09:00', by: 'Sarah Khan', change: 'Pay day is now every Friday.',
+    sections: [
+      { h: 'Jobs', t: 'LSP gives you jobs through this portal. Confirm each visit. You can hand a job back before you start it.' },
+      { h: 'Pay', t: 'You are paid your agreed hourly rate, or the fixed price on the job, plus parts LSP agrees first. Rates are reviewed every January.' },
+      { h: 'Invoices', t: 'Invoice Landlord Service Plans Limited from the job, with the photos. LSP pays approved invoices every Friday by bank transfer.' },
+      { h: 'Extra work', t: 'Extra work is only paid when LSP agrees it first, as follow-up work.' },
+      { h: 'Checks', t: 'Keep your public liability insurance (at least £2 million), trade registration and DBS check in date. If one ends, LSP pauses you.' },
+      { h: 'Putting it right', t: 'If LSP sends work back, put it right at no extra cost.' },
+      { h: 'Ending', t: 'Either side can end this agreement with 30 days\' notice. Jobs already started are finished and paid.' },
+    ],
+    history: [{ version: 2, published: '20 Mar 2026, 11:00', by: 'Sarah Khan', change: 'DBS check added to the checks.' }, { version: 1, published: '2 Jan 2026, 10:00', by: 'Sarah Khan', change: 'First version.' }] },
+  rules: { id: 'rules', title: 'Health, safety and conduct rules', version: 2, published: '1 Sep 2026, 09:00', by: 'Sarah Khan', change: 'Added the rule on making gas appliances safe.',
+    sections: [
+      { h: 'Arriving', t: 'Carry photo ID and say you are from LSP. Be on time, or tell LSP before the visit.' },
+      { h: 'Tenants', t: 'Be polite. Only use a tenant\'s number for the visit, and never share their details.' },
+      { h: 'Keys', t: 'Return keys the same day. Never copy a key or give it to anyone else.' },
+      { h: 'Photos', t: 'Take before and after photos of every job.' },
+      { h: 'Making safe', t: 'Make anything unsafe safe straight away, label it, and tell the tenant and LSP. Gas appliances follow Gas Safe rules.' },
+      { h: 'Leaving', t: 'Take your waste away and leave the home clean. No smoking in the home.' },
+    ],
+    history: [{ version: 1, published: '2 Jan 2026, 10:00', by: 'Sarah Khan', change: 'First version.' }] },
 };
 
 /* ---------- homes the contractor visits (address and access only) ---------- */

@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Receipt, Clock, CheckCircle2, CalendarDays, Landmark, Download, ArrowRight, MessageSquare, Wrench } from 'lucide-react';
+import { Receipt, Landmark, Download, ArrowRight, MessageSquare, Wrench } from 'lucide-react';
 import { useStore, useLookups, money } from '../store';
 import { parseDate } from '../data';
-import { Btn, Card, Chip, Drawer, Empty, KV, Kpi, Note, Tabs, Timeline, FilterBar, applyFlt, useFlt, yearsOf, When } from '../ui';
+import { Btn, Card, Chip, Drawer, Empty, KV, Note, Timeline, FilterBar, applyFlt, useFlt, yearsOf, When, Stat, PageTabs, InfoTip } from '../ui';
 import { PageHeader, crumbsFor } from '../Shell';
-import { moneyOf, billOf, invView, remittances, RemittanceModal, AskModal, downloadPdf, bankLine, JobIcon } from './lib';
+import { moneyOf, billOf, invView, remittances, RemittanceModal, AskModal, downloadPdf, bankLine } from './lib';
 
 /** The contractor's invoices to LSP and the payments LSP made. LSP pays approved invoices every Friday. */
 export function Payments() {
@@ -18,38 +18,28 @@ export function Payments() {
   const rs = remittances(s);
   return <>
     <PageHeader crumbs={crumbsFor('payments', s.go)} title="Invoices & Payments" action={<Btn kind="outline" icon={<Download size={18} />} onClick={() => { s.log('Downloaded the payments list', 'Payments'); s.toast('Payments list downloaded as Excel'); }}>Download list</Btn>} />
-    <div className="grid g4">
-      <Kpi icon={<Receipt size={18} />} tone="ok" label="Approved, to be paid" value={money(mo.toCome)} caption={`${mo.approved.length} invoice${mo.approved.length === 1 ? '' : 's'}`} active={tab === 'approved'} onClick={() => setTab('approved')} />
-      <Kpi icon={<Clock size={18} />} tone="info" label="LSP checking" value={money(mo.checkingAmt)} caption={`${mo.checking.length} with photos`} active={tab === 'checking'} onClick={() => setTab('checking')} />
-      <Kpi icon={<CalendarDays size={18} />} tone="brand" label="Next pay day" value={mo.next.replace(' 2026', '')} caption="every Friday by bank transfer" />
-      <Kpi icon={<CheckCircle2 size={18} />} tone="ok" label="Paid this year" value={money(mo.paidYear)} caption={`${s.bills.filter(b => b.paid).length} invoices`} active={tab === 'paid'} onClick={() => setTab('paid')} />
+    {!s.me.bank && <div className="alertbar a-warn"><span className="tile t-warn" style={{ width: 32, height: 32 }}><Landmark size={18} /></span><b className="grow">{s.me.bankPending ? 'LSP is checking your bank details by phone' : 'Add your bank details so LSP can pay you'}</b><Btn sm kind="outline" onClick={() => s.go('account')}>{s.me.bankPending ? 'View' : 'Add bank details'}</Btn></div>}
+    <div className="grid g3">
+      <Stat tone="ok" label="Approved, to be paid" value={money(mo.toCome)} sub={`Pay day ${mo.next.replace(' 2026', '')}`} />
+      <Stat tone="info" label="LSP checking" value={money(mo.checkingAmt)} sub={`${mo.checking.length} invoice${mo.checking.length === 1 ? '' : 's'}`} />
+      <Stat tone="brand" label="Paid this year" value={money(mo.paidYear)} sub={`${s.bills.filter(b => b.paid).length} invoices`} />
     </div>
-    <div className="dgrid">
-      <div className="col">
-        <Card title={tab === 'remit' ? 'Remittances' : 'Your invoices to LSP'} sub={tab === 'remit' ? 'What LSP paid on each pay day.' : 'Each invoice is sent from the job with the photos. LSP approves it when the work is checked.'}
-          action={<Tabs value={tab} onChange={setTab} items={[{ id: 'all', label: 'All', count: sent.length }, { id: 'checking', label: 'Checking' }, { id: 'approved', label: 'Approved' }, { id: 'paid', label: 'Paid' }, { id: 'remit', label: 'Remittances', count: rs.length }]} />}>
-          {tab !== 'remit' ? <>
-            {pick.length > 2 && <FilterBar f={f} set={setF} placeholder="Search invoice number, job or address" years={yearsOf(pick, j => j.cInvoice!.at)} shown={list.length} total={pick.length} />}
-            <div className="tablewrap"><table className="t"><thead><tr><th>Your invoice</th><th>Job</th><th>Sent</th><th>Amount</th><th>Status</th><th /></tr></thead><tbody>
-              {list.map(j => { const v = invView(s, j); return <tr key={j.id} onClick={() => s.go('payments', j.id)}>
-                <td><b className="strong">{j.cInvoice!.no}</b></td>
-                <td><span className="cell"><JobIcon j={j} size={28} /><span className="stack"><b>{j.title}</b><span className="caption">{j.id} · {L.prop(j.property)?.address}</span></span></span></td>
-                <td><When at={j.cInvoice!.at} /></td><td><b>{money(j.cInvoice!.amount)}</b></td>
-                <td><Chip tone={v.tone}>{v.label}</Chip></td><td style={{ textAlign: 'right' }}><ArrowRight size={16} color="#98A2B3" /></td></tr>; })}
-            </tbody></table>{!list.length && <Empty icon={<Receipt size={22} />}>No invoices here.</Empty>}</div></>
-            : rs.length ? <div className="tablewrap"><table className="t"><thead><tr><th>Remittance</th><th>Paid on</th><th>Invoices</th><th>Total</th><th /></tr></thead><tbody>
-              {rs.map(r => <tr key={r.id} onClick={() => setRemit(r.id)}><td><b className="strong">{r.id}</b></td><td>{r.date}</td><td>{r.bills.map(b => b.no).join(', ')}</td><td><b>{money(r.total)}</b></td><td style={{ textAlign: 'right' }}><Btn sm kind="ghost" onClick={() => setRemit(r.id)}>View</Btn></td></tr>)}
-            </tbody></table></div> : <Empty icon={<Landmark size={22} />}>No payments yet.</Empty>}
-        </Card>
-      </div>
-      <div className="col">
-        <Card title="How you get paid">
-          <div className="col" style={{ gap: 8 }}>{['Finish the job and send your invoice with the photos.', 'LSP checks the work, usually within 1 working day.', 'Approved invoices are paid every Friday by bank transfer.', 'The remittance shows here and comes by email.'].map((t, i) => <span key={i} className="flex small" style={{ gap: 10, alignItems: 'flex-start' }}><span className="tile t-brand" style={{ width: 24, height: 24, fontSize: 12, fontWeight: 700 }}>{i + 1}</span>{t}</span>)}</div>
-          <Note>Invoice Landlord Service Plans Limited, 1 Upper Street, London N1 0PQ. Put the job number on it. Only the agreed amount is paid unless LSP agrees more.</Note>
-        </Card>
-        <Card title="Paid into" action={<Landmark size={18} color="#667085" />}><b>{bankLine(s)}</b><span className="caption">To change it, ask from Account. LSP checks the change by phone first.</span><Btn kind="outline" onClick={() => s.go('account')}>Change bank details</Btn></Card>
-      </div>
-    </div>
+    <PageTabs value={tab} onChange={setTab} items={[{ id: 'all', label: 'All', count: sent.length }, { id: 'checking', label: 'Checking' }, { id: 'approved', label: 'Approved' }, { id: 'paid', label: 'Paid' }, { id: 'remit', label: 'Remittances', count: rs.length }]} />
+    <Card title={<span className="clean-h">{tab === 'remit' ? 'Remittances' : 'Your invoices'}<InfoTip>Send your invoice from the job with the photos. LSP checks the work, usually within 1 working day, and pays approved invoices every Friday by bank transfer. Invoice Landlord Service Plans Limited and put the job number on it.</InfoTip></span>}
+      action={<span className="caption">Paid into {bankLine(s)}</span>}>
+      {tab !== 'remit' ? <>
+        {pick.length > 4 && <FilterBar f={f} set={setF} placeholder="Search invoice, job or address" years={yearsOf(pick, j => j.cInvoice!.at)} shown={list.length} total={pick.length} />}
+        <div className="tablewrap"><table className="t"><thead><tr><th>Invoice</th><th>Job</th><th>Sent</th><th>Amount</th><th>Status</th><th /></tr></thead><tbody>
+          {list.map(j => { const v = invView(s, j); return <tr key={j.id} onClick={() => s.go('payments', j.id)}>
+            <td><b className="strong">{j.cInvoice!.no}</b></td>
+            <td><span className="stack"><b>{j.title}</b><span className="caption">{L.prop(j.property)?.address}</span></span></td>
+            <td><When at={j.cInvoice!.at} /></td><td><b>{money(j.cInvoice!.amount)}</b></td>
+            <td><Chip tone={v.tone}>{v.label}</Chip></td><td style={{ textAlign: 'right' }}><ArrowRight size={16} color="#98A2B3" /></td></tr>; })}
+        </tbody></table>{!list.length && <Empty icon={<Receipt size={22} />}>No invoices here.</Empty>}</div></>
+        : rs.length ? <div className="tablewrap"><table className="t"><thead><tr><th>Remittance</th><th>Paid on</th><th>Invoices</th><th>Total</th><th /></tr></thead><tbody>
+          {rs.map(r => <tr key={r.id} onClick={() => setRemit(r.id)}><td><b className="strong">{r.id}</b></td><td>{r.date}</td><td>{r.bills.map(b => b.no).join(', ')}</td><td><b>{money(r.total)}</b></td><td style={{ textAlign: 'right' }}><ArrowRight size={16} color="#98A2B3" /></td></tr>)}
+        </tbody></table></div> : <Empty icon={<Landmark size={22} />}>No payments yet.</Empty>}
+    </Card>
     {open && <InvoiceDrawer id={open.id} onClose={() => s.go('payments')} onRemit={setRemit} />}
     {remit && <RemittanceModal id={remit} onClose={() => setRemit('')} />}
   </>;

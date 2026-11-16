@@ -19,6 +19,7 @@ interface Store {
   toast: (msg: string) => void; toasts: { id: number; msg: string }[];
   log: (what: string, area: string, who?: string) => void; activity: D.Activity[];
   me: D.Contractor; setMe: (fn: (a: D.Contractor) => D.Contractor) => void;
+  /** LSP's current contractor agreement and rules (set by the Supervisor). */ terms: Record<D.TermsId, D.TermsDoc>; setTerms: (fn: (t: Record<D.TermsId, D.TermsDoc>) => Record<D.TermsId, D.TermsDoc>) => void;
   properties: D.Property[]; staff: D.Staff[];
   jobs: D.Job[]; setJobs: Setter<D.Job>;
   bills: D.Bill[]; setBills: Setter<D.Bill>;
@@ -27,6 +28,8 @@ interface Store {
   requests: D.CReq[]; setRequests: Setter<D.CReq>;
   /** Message ids from LSP that the contractor has opened. */ read: string[]; markRead: (ids: string[]) => void;
 }
+/** Session flag for a contractor who signed in straight after joining (shows "Add your bank details"). */
+export const NEW_KEY = 'genesis-ct-new';
 const Ctx = createContext<Store>(null as unknown as Store);
 export const useStore = () => useContext(Ctx);
 
@@ -45,7 +48,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const detail = parts[1] ? decodeURIComponent(parts[1]) : null;
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
   const [activity, setActivity] = useState<D.Activity[]>(D.ACTIVITY);
-  const [me, setMeState] = useState<D.Contractor>(D.CONTRACTOR);
+  /* A contractor who has just joined (set by the onboarding flow) has no bank details yet: they add them in the portal. */
+  const [me, setMeState] = useState<D.Contractor>(() => { let fresh = false; try { fresh = sessionStorage.getItem(NEW_KEY) === '1'; } catch { /* storage blocked */ } return fresh ? { ...D.CONTRACTOR, bank: null } : D.CONTRACTOR; });
+  const [terms, setTermsState] = useState(D.TERMS);
+  const setTerms = useCallback((fn: (t: Record<D.TermsId, D.TermsDoc>) => Record<D.TermsId, D.TermsDoc>) => setTermsState(t => fn(t)), []);
   const [jobs, setJobs] = useList(SCOPE.jobs);
   const [bills, setBills] = useList(D.BILLS);
   const [timeOff, setTimeOff] = useList(D.TIME_OFF);
@@ -66,9 +72,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const markRead = useCallback((ids: string[]) => setRead(r => [...new Set([...r, ...ids])]), []);
 
   const value = useMemo(() => ({
-    route, detail, go, toast, toasts, log, activity, me, setMe,
+    route, detail, go, toast, toasts, log, activity, me, setMe, terms, setTerms,
     properties: SCOPE.properties, staff: D.STAFF, jobs, setJobs, bills, setBills, timeOff, setTimeOff, rooms, setRooms, requests, setRequests, read, markRead,
-  }), [route, detail, go, toast, toasts, log, activity, me, setMe, jobs, setJobs, bills, setBills, timeOff, setTimeOff, rooms, setRooms, requests, setRequests, read, markRead]);
+  }), [route, detail, go, toast, toasts, log, activity, me, setMe, terms, setTerms, jobs, setJobs, bills, setBills, timeOff, setTimeOff, rooms, setRooms, requests, setRequests, read, markRead]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

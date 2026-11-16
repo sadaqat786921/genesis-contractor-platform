@@ -261,3 +261,25 @@ export function FilterBar({ f, set, placeholder = 'Search', types, typeLabel = '
     {shown !== undefined && total !== undefined && active && <span className="caption fcount">{shown} of {total}</span>}
   </div>;
 }
+
+/* ---------- clean-up helpers: keep explanations out of the way ---------- */
+/** A small ⓘ that shows a short explanation on hover or focus. Use it instead of a sentence on the screen. */
+export function InfoTip({ children, label = 'More information' }: { children: ReactNode; label?: string }) {
+  return <span className="itip" tabIndex={0} aria-label={label}><Info size={14} /><span className="itip-b" role="tooltip">{children}</span></span>;
+}
+/** Secondary actions behind one "More" button, so each screen has one main action. */
+export function MoreMenu({ items, label = 'More' }: { items: ({ label: string; icon?: ReactNode; onClick: () => void; danger?: boolean } | false | null | undefined)[]; label?: string }) {
+  const [open, setOpen] = useState(false); const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (!open) return; const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h); }, [open]);
+  const list = items.filter(Boolean) as { label: string; icon?: ReactNode; onClick: () => void; danger?: boolean }[];
+  return <div className="more" ref={ref}>{label === '···' ? <button type="button" className="btn line sm dots" aria-label="More actions" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>···</button> : <button type="button" className="btn line" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(o => !o)}>{label}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg></button>}
+    {open && <div className="more-m" role="menu">{list.map(it => <button key={it.label} type="button" role="menuitem" className={it.danger ? 'danger' : ''} onClick={() => { setOpen(false); it.onClick(); }}>{it.icon}{it.label}</button>)}</div>}</div>;
+}
+/** A photo placeholder: a neutral tile with a camera icon and the photo's name. */
+export function PhotoTile({ name }: { name: string }) {
+  return <div className="phtile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="14" rx="3" /><circle cx="12" cy="12" r="3.2" /><path d="M8 5l1.5-2h5L16 5" /></svg><span>{name}</span></div>;
+}
+/** Label / value pairs side by side, for short facts. */
+export function Facts({ items }: { items: [string, ReactNode][] }) {
+  return <div className="facts">{items.map(([k, v]) => <div key={k}><span>{k}</span><b>{v}</b></div>)}</div>;
+}

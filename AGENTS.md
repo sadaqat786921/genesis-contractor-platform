@@ -39,9 +39,21 @@ The client has approved this design. When editing:
 - `src/pages/Join.tsx`, route `#/join`, opened from **"Join as a contractor"** on the login page (before sign-in). Steps (`HSteps`): Your business → Your work → Your documents → Agree and send → LSP checks.
 - **Your business:** type (limited company / sole trader / partnership), name, company number (8 digits for a limited company), contact, mobile, email (their login), address, postcode, VAT. "Fill with example" fills Northside Plumbing & Heating Ltd.
 - **Your work:** trade work or site inspections, trades, areas covered (North London), hourly rate, emergency call-outs, team size, years trading.
-- **Your documents (KYC):** photo ID, right to work (optional share code), public liability insurance (policy number, end date, cover at least £2 million), the trade registration for each trade (Gas Safe, NICEIC/NAPIT, WaterSafe/CIPHE, CompetentRoofer, MLA, AIIC/ABBE), bank details (letter plus account name, sort code, account number). Ended documents can't be uploaded; ones ending within 60 days are flagged.
-- **Agree and send:** summary with Change links, the contractor agreement and the health, safety and conduct rules (summary pop-ups), consent to checks, "everything is true".
+- **Your documents (KYC):** photo ID, right to work (optional share code), public liability insurance (policy number, end date, cover at least £2 million), the trade registration for each trade (Gas Safe, NICEIC/NAPIT, WaterSafe/CIPHE, CompetentRoofer, MLA, AIIC/ABBE), and a **DBS check** (photo of the front and the back, type, 12-digit certificate number, issue date within the last 3 years; LSP asks for a new one 3 years after it was issued; `DbsUpload` in `Compliance.tsx`). Ended documents can't be uploaded; ones ending within 60 days are flagged. **No bank details at onboarding:** they are added in the portal after joining.
+- **Agree and send:** summary with Change links, the **contractor agreement** and the **health, safety and conduct rules** shown as LSP's current version (`TermsModal`, `s.terms`), consent to checks, "everything is true".
 - **LSP checks:** application status page (Checking / More info asked / Approved / Not approved) with each document's status and the history. Prototype answers: LSP approves (login email; "Set your password" opens the login's set-password step with their email), asks for more (insurance sent back; re-upload and "Send back to LSP"), or rejects (reason). In the live product the Supervisor answers on the **Sign-Ups** page of the Supervisor portal.
+
+## Agreement and rules (set by LSP)
+- `TERMS` in `data.ts` (`s.terms` in the store): the contractor agreement and the health, safety and conduct rules, each with a version, sections, what changed and earlier versions. The Supervisor edits and publishes them in the Supervisor portal (**Settings › Contractor agreement and rules**). `me.accepted` holds the version each contractor accepted.
+- When LSP publishes a newer version, My Day, the bell and Account show **"Read and accept"** (`termsDue`, `TermsModal` with a tick). Account › Agreement and rules lists both with the accepted version. Prototype answer: "LSP publishes a new agreement".
+
+## Bank details (added after joining)
+- `me.bank` is `null` for a contractor who just joined (the Join flow's "Set your password" sets `NEW_KEY` in sessionStorage). My Day, the bell, Invoices & Payments and Account then show **"Add bank details"**. Adding or changing: account name, sort code, account number → security code to the phone (123456) → `me.bankPending` ("LSP checking") → LSP calls to check (prototype answer "LSP checks it by phone") → `me.bank`. LSP can't pay until bank details are checked.
+
+## Clean layout rules (this portal)
+- Short labels and chips instead of sentences; explanations go behind an ⓘ (`InfoTip` in `ui.tsx`). No card sub-lines unless they add something.
+- One main action per screen; the rest in a **More** menu (`MoreMenu`). Long detail pages use tabs (`PageTabs`): the job page has Details / Photos & invoice / History / Rooms.
+- Short facts use `Facts` (label over value). Alerts are one line with one button (`.alertbar`). Photo placeholders use `PhotoTile` (camera icon and name), not house pictures.
 
 ## The job flow (same as the staff job flows, seen from the contractor's side)
 Contractor steps (`STEPS` in `lib.tsx`): Job given to you → Visit confirmed → Work started → Photos and invoice sent → Checked by LSP → Paid. Statuses: `Assigned` (with `visitOk` once confirmed) → `In progress` → `Proof uploaded` (or `Sent back`) → `Approved` (their invoice becomes a `Bill`, paid on the next Friday); `Cancelled` when they hand a job back.
@@ -53,15 +65,15 @@ Contractor steps (`STEPS` in `lib.tsx`): Job given to you → Visit confirmed �
 
 ## Money
 - LSP pays approved invoices **every Friday** by bank transfer. `Bill` = an approved invoice (`payRun`, `paid`, `remit`). Bills paid on one day make a **remittance** (LSP paper, PDF).
-- Bank detail changes: new details + security code to the phone, then LSP calls to check before using them (request kind `Bank details`).
+- Bank details are added or changed from Account (see "Bank details" above). LSP checks every account by phone before paying into it.
 
 ## Compliance
-- LSP holds Photo ID, right to work, public liability insurance, Gas Safe registration and bank details (`docs`). Insurance and the trade registration must stay in date (reminders 60 and 30 days before). If one runs out the contractor is **Paused**: no new jobs and they can't confirm or start booked ones. Uploading a new one goes to "LSP checking"; when LSP checks it they are active again. Earlier versions are kept.
+- LSP holds Photo ID, right to work, public liability insurance, Gas Safe registration and the DBS check (`docs`; the DBS check has a photo of both sides). Insurance, the trade registration and the DBS check must stay in date (reminders 60 and 30 days before). If one runs out the contractor is **Paused**: no new jobs and they can't confirm or start booked ones. Uploading a new one goes to "LSP checking"; when LSP checks it they are active again. Earlier versions are kept.
 
 ## Screens (`src/pages/`)
 - `Join.tsx`: contractor onboarding and KYC (see above).
-- `Home.tsx` (**My Day**): to-be-paid hero (pay day, jobs done ring), Today's visits, KPIs, Needs you, Coming up, Waiting for LSP, insurance status, homes you're visiting, LSP contacts.
-- `Jobs.tsx` (**My Jobs**): list (to do, booked, LSP checking, done, all; search, type, year) and the job page with every step, the finish form and the prototype answers.
+- `Home.tsx` (**My Day**): one-line alerts only when needed (paused, add bank details, new agreement to accept, document ending), to-be-paid hero (pay day, to do, booked, with LSP), Today's visits, Needs you, Coming up.
+- `Jobs.tsx` (**My Jobs**): list (tabs to do, booked, LSP checking, done, all; search, type, year) and the job page (summary, steps, tabs Details / Photos & invoice / History / Rooms, next-step card, getting in, home, LSP contact, More menu), the finish form and the prototype answers.
 - `Calendar.tsx`: 14 days of visits, pay days and time off (earlier / later); **Add time off** (warns about booked visits and asks LSP to move them), remove time off.
 - `Payments.tsx` (**Invoices & Payments**): your invoices (checking, approved, paid), invoice drawer with what happened, remittances, how you get paid, bank account.
 - `Compliance.tsx` (**Insurance & Certificates**): documents, upload a new one, earlier versions, the rules, paused state.

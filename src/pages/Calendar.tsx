@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, ChevronLeft, ChevronRight, Palmtree, Trash2, CalendarDays, Receipt, MapPin } from 'lucide-react';
 import { useStore, useLookups, money } from '../store';
 import { TODAY, DAYS, MONTHS, fmtDate, parseDate, nowStamp, daysFrom } from '../data';
-import { Btn, Card, Chip, Empty, Field, Modal, Note, Select, Area, Confirm } from '../ui';
+import { Btn, Card, Chip, Empty, Field, Modal, Note, Select, Area, Confirm, InfoTip } from '../ui';
 import { PageHeader, crumbsFor } from '../Shell';
 import { jobView, timeOf, dayOf, todo, sendMsg, JobIcon } from './lib';
 
@@ -16,7 +16,7 @@ export function Calendar() {
     <PageHeader crumbs={crumbsFor('calendar', s.go)} title="Calendar" action={<Btn icon={<Plus size={18} />} onClick={() => setAdd(true)}>Add time off</Btn>} />
     <div className="dgrid">
       <div className="col">
-        <Card title={`${days[0].getDate()} ${MONTHS[days[0].getMonth()]} to ${days[13].getDate()} ${MONTHS[days[13].getMonth()]} ${days[13].getFullYear()}`} sub="Your visits, pay days and time off, day by day."
+        <Card title={`${days[0].getDate()} ${MONTHS[days[0].getMonth()]} to ${days[13].getDate()} ${MONTHS[days[13].getMonth()]} ${days[13].getFullYear()}`}
           action={<div className="flex"><Btn sm kind="outline" icon={<ChevronLeft size={14} />} onClick={() => setStart(x => x - 14)}>Earlier</Btn>{start !== 0 && <Btn sm kind="ghost" onClick={() => setStart(0)}>Today</Btn>}<Btn sm kind="outline" onClick={() => setStart(x => x + 14)}>Later <ChevronRight size={14} /></Btn></div>}>
           <div className="divlist">{days.map(d => {
             const dl = fmtDate(d); const js = visits.filter(j => dayOf(j.visit) === dl).sort((a, b) => parseDate(a.visit).getTime() - parseDate(b.visit).getTime());
@@ -39,11 +39,10 @@ export function Calendar() {
         </Card>
       </div>
       <div className="col">
-        <Card title="Time off" sub="LSP won't book you on these days." action={<Btn sm kind="ghost" icon={<Plus size={14} />} onClick={() => setAdd(true)}>Add</Btn>}>
+        <Card title={<span className="clean-h">Time off<InfoTip>LSP won't book you on these days. Visits already booked need moving, so LSP is told when you add time off.</InfoTip></span>} action={<Btn sm kind="ghost" icon={<Plus size={14} />} onClick={() => setAdd(true)}>Add</Btn>}>
           {s.timeOff.length ? <div className="divlist">{s.timeOff.map(t => <div key={t.id} className="lrow"><span className="tile t-neutral" style={{ width: 32, height: 32 }}><Palmtree size={15} /></span><div className="stack grow"><b>{t.from === t.to ? t.from : `${t.from} to ${t.to}`}</b><span className="caption">{t.why} · added {t.added}</span></div>{daysFrom(t.to) >= 0 && <Btn sm kind="ghost" icon={<Trash2 size={14} />} onClick={() => setDel(t.id)}>Remove</Btn>}</div>)}</div> : <Empty icon={<Palmtree size={22} />}>No time off booked.</Empty>}
         </Card>
-        <Card title="How booking works"><span className="small" style={{ lineHeight: 1.6 }}>LSP books each visit and tells you here, by email and by text. Confirm it on the job. If the time doesn't work, ask for another one there. Emergencies are booked for the same day.</span>
-          <Btn kind="outline" icon={<CalendarDays size={16} />} onClick={() => s.go('jobs')}>My Jobs</Btn></Card>
+
       </div>
     </div>
     {add && <TimeOffModal onClose={() => setAdd(false)} />}
